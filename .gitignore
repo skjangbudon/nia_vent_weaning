@@ -5,8 +5,7 @@ result/
 raw_data/
 .idea/
 input_data/ 
-*.log
-
+**/*.log
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,pycharm,python,jupyternotebooks,windows,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,pycharm,python,jupyternotebooks,windows,visualstudiocode
