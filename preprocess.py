@@ -14,6 +14,10 @@ data_path = '/VOLUME/nia_vent_weaning/data/'
 
 def main(data_path, input_window):
 
+    '''
+        Return : (i) Labelling DataFrame  (ii) dataset DataFrame
+    '''
+
     label = dataset.get_label(data_path + 'integrated_data/before/')
     data_dir = data_path + '/model_data/' + str(input_window) + 'h/'
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
@@ -30,7 +34,9 @@ def main(data_path, input_window):
     dataset = dataset.drop(columns=ignore_features, axis=1)
     dataset = dataset.iloc[:, 3: ]
 
-    return dataset
+    return label, dataset
 
 
     
+if __name__ == "__main__":
+	main()
