@@ -12,16 +12,16 @@
 # 1. Data Preprocessing
     python preprocess.py
 
-기관별 Ventilator_Parameter, 유관데이터(임상데이터)를 하나의 dataset으로 통합하는 전처리 코드
+### 기관별 Ventilator_Parameter, 유관데이터(임상데이터)를 하나의 dataset으로 통합하는 전처리 코드
 --
 
 # 2. Train
     python train.py 
 
-전처리가 완료된 데이터셋과 라벨 파일을 입력받아 훈련셋(training set)과 검증셋(validation set)으로 나누어 Split 한 후, Random-sampling 하여 모델을 학습함.
+### 전처리가 완료된 데이터셋과 라벨 파일을 입력받아 훈련셋(training set)과 검증셋(validation set)으로 나누어 Split 한 후, Random-sampling 하여 모델을 학습함.
 --
 
 # 3. Test
     python test.py
 
-훈련에 사용되지 않은 테스트셋으로 훈련된 모델을 사용하여 예측하고, 성능지표를 활용하여 평가함.
+### 훈련에 사용되지 않은 테스트셋으로 훈련된 모델을 사용하여 예측하고, 성능지표를 활용하여 평가함.
