@@ -201,7 +201,7 @@ def preprocessing(input_window):
     '''
 
     parser = ConfigParser()
-    parser.read('/VOLUME/nia_vent_weaning/config/preprocessing_config.ini')
+    parser.read('/VOLUME/nia_vent_weaning/config/preprocess_config.ini')
     data_path = parser.get('PATH', 'data_path')
     input_window = parser.get('OPTION', 'input_length')
 
