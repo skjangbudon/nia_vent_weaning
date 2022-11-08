@@ -4,7 +4,7 @@ import re
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
-from module import dataset
+from module.dataset import *
 
 # Integration Total dataset
 
