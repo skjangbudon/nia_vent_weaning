@@ -13,8 +13,6 @@ import joblib    # For Saving Models
 # Imputation
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
-# Evaluation
-from sklearn.metrics  import roc_auc_score, f1_score, recall_score, confusion_matrix, precision_score, average_precision_score, roc_curve, accuracy_score, auc
 
 warnings.filterwarnings('ignore')
 
@@ -152,7 +150,7 @@ def model_train(train_x, train_y, model,  model_idx):
     clf.fit(train_x, train_y)
 
     # Save Model (pickled binary file)
-    file_name = 'model_' + str(model_idx) +'.pkl' 
+    file_name = model + '_' + str(model_idx) +'.pkl' 
     joblib.dump(clf, model_path + file_name)
 
 
@@ -160,13 +158,25 @@ if __name__ == '__main__':
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     input_data_path = parser.get('PATH', 'input_data_path')
+    num_sampling = int(parser.get('OPTION', 'num_sampling'))
     model =  parser.get('OPTION', 'model')
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
         data_split()
+        
+        for model_idx in range(0, num_sampling):
+
+            trainset = pd.read_csv(input_data_path + "trainset_" + str(model_idx) + ".csv")
+            # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
+
+            train_x = trainset.drop(['label'], axis=1)
+            train_y = trainset[['label']]
+
+            model_train(train_x, train_y, model, model_idx)
 
     else:
-        for model_idx in range(0, 10):
+
+        for model_idx in range(0, num_sampling):
 
             trainset = pd.read_csv(input_data_path + "trainset_" + str(model_idx) + ".csv")
             # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")

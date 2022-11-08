@@ -4,6 +4,9 @@ dataset/
 result/
 raw_data/
 .idea/
+model/
+input/
+model/
 input_data/ 
 **/*.log
 *.csv

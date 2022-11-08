@@ -205,6 +205,7 @@ def preprocessing(input_window):
     data_path = parser.get('PATH', 'data_path')
     input_window = parser.get('OPTION', 'input_length')
 
+    # label_df
     label = dataset.get_label(data_path + 'integrated_data/before/')
     data_dir = data_path + 'model_data/' + str(input_window) + 'h/'
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
