@@ -38,8 +38,6 @@ def evaluation(y_prob, test_y, cut_off):
 
 
 # Get Log
-
-
 def get_logger(name, level=logging.DEBUG, resetlogfile=False, path='log'):
     formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
 
