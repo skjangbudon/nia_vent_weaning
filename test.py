@@ -8,3 +8,10 @@ def ci95(inp):
     max95 = round(np.mean(inp) + (1.96 * (np.std(inp) / np.sqrt(len(inp)))),2)
     min95 = round(np.mean(inp) - (1.96 * (np.std(inp) / np.sqrt(len(inp)))),2)
     return min95, max95
+
+
+def model_test():
+    pass
+
+def evaluation():
+    pass

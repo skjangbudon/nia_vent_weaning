@@ -1,13 +1,15 @@
 # Python Script for Training
 
 # Preprocessing
-import tqdm, numpy as np, warnings, pandas as pd, re, random, datetime
+import tqdm, os, numpy as np, warnings, pandas as pd, re, random, datetime as dt
+from timeit import default_timer as timer
+from configparser import ConfigParser
 # About Model
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from lightgbm import LGBMClassifier
-from sklearn.externals import joblib    # For Saving Models
+import joblib    # For Saving Models
 # Imputation
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
@@ -16,9 +18,7 @@ from sklearn.metrics  import roc_auc_score, f1_score, recall_score, confusion_ma
 
 warnings.filterwarnings('ignore')
 
-
-def data_split(dataset, input_window, num_sampling, dst_dir):
-
+def data_split():
     '''
         Input
             1. dataset : Total dataset
@@ -26,8 +26,16 @@ def data_split(dataset, input_window, num_sampling, dst_dir):
             3. num_sampling : Number of Random Sampling
             4. dst_dir : split data destination
     '''
+    parser = ConfigParser()
+    parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
+    data_dir = parser.get('PATH', 'data_path')
+    input_data_path = parser.get('PATH', 'input_data_path')
+    num_sampling = int(parser.get('OPTION', 'num_sampling'))
+    input_window = parser.get('OPTION', 'input_length')
 
-    print('Dataset Sampling Started at ', datetime.datetime.now())
+    start = timer()
+
+    print('Dataset Sampling Started at ', dt.datetime.now())
 
     data_dir = '/VOLUME/nia_vent_weaning/data/model_data/' + str(input_window) + 'h/'
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
@@ -41,7 +49,6 @@ def data_split(dataset, input_window, num_sampling, dst_dir):
     'epinephrine', 'dexmedetomidine','norepinephrine', 'remifentanil', 'BT_mean', 'BT_std', 'Ventilator_Tidal volume(setting)']
     # dataset = dataset.fillna(1111)
     dataset = dataset.drop(columns=ignore_features, axis=1)
-    dataset
 
     # 불필요한 컬럼 제거
     dataset = dataset.iloc[:, 3: ]
@@ -79,6 +86,7 @@ def data_split(dataset, input_window, num_sampling, dst_dir):
         test_x = testset.drop([ 'pid', 'label'], axis=1)
         test_y = testset['label']
 
+        # MICE
         imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
 
         # TRAIN imputation
@@ -99,21 +107,28 @@ def data_split(dataset, input_window, num_sampling, dst_dir):
         data_imputed.columns = feature
         test_imputed = data_imputed
 
-        train_x = train_imputed
-        test_x = test_imputed
+        # reset index
+        train_x = train_imputed.reset_index(drop=True)
+        train_y = train_y.reset_index(drop=True)
+        test_x = test_imputed.reset_index(drop=True)
+        test_y = test_y.reset_index(drop=True)
 
-    trainset = pd.concat([train_x, train_y], axis=1)
-    testset = pd.concat([test_x, test_y], axis=1)
+        trainset = pd.concat([train_x, train_y], axis=1)
+        testset = pd.concat([test_x, test_y], axis=1)
 
-    trainset.to_csv(dst_dir + 'trainset_' + str(s_i) + '.csv')
-    testset.to_csv(dst_dir  + 'testset_' + str(s_i) + '.csv')
-
-    print('Dataset Sampling Ended at ', datetime.datetime.now(), 'Time Elapsed: ', )
+        trainset.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        testset.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+    end = timer()
+    print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
     return trainset, testset
 
 
-def train(train_x, train_y, model, save_dir):
+def model_train(train_x, train_y, model,  model_idx):
+
+    parser = ConfigParser()
+    parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
+    model_path = parser.get('PATH', 'model_path')
 
     '''
         Input
@@ -134,7 +149,29 @@ def train(train_x, train_y, model, save_dir):
     elif model == 'SVM':
         clf = SVC(C=2, gamma=100, kernel='poly', probability=True)
 
-    clf.fit(train_x,train_y)
-# 객체를 pickled binary file 형태로 저장한다 
-file_name = 'object_01.pkl' 
-joblib.dump(obj, file_name) 
+    clf.fit(train_x, train_y)
+
+    # Save Model (pickled binary file)
+    file_name = 'model_' + str(model_idx) +'.pkl' 
+    joblib.dump(clf, model_path + file_name)
+
+
+if __name__ == '__main__':
+    parser = ConfigParser()
+    parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
+    input_data_path = parser.get('PATH', 'input_data_path')
+    model =  parser.get('OPTION', 'model')
+
+    if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
+        data_split()
+
+    else:
+        for model_idx in range(0, 10):
+
+            trainset = pd.read_csv(input_data_path + "trainset_" + str(model_idx) + ".csv")
+            # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
+
+            train_x = trainset.drop(['label'], axis=1)
+            train_y = trainset[['label']]
+
+            model_train(train_x, train_y, model, model_idx)
