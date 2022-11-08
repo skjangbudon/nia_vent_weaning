@@ -4,43 +4,12 @@ import joblib
 from configparser import ConfigParser
 import datetime as dt
 from timeit import default_timer as timer
+from pytz import timezone
 # Evaluation
-from sklearn.metrics  import roc_auc_score, f1_score, recall_score, confusion_matrix, precision_score, average_precision_score, roc_curve, accuracy_score, auc
-
-
-# 95% CI function
-def ci95(inp):
-    max95 = round(np.mean(inp) + (1.96 * (np.std(inp) / np.sqrt(len(inp)))),2)
-    min95 = round(np.mean(inp) - (1.96 * (np.std(inp) / np.sqrt(len(inp)))),2)
-    return min95, max95
-
-# Calculate Evaluation Indicator
-def evaluation(y_prob, test_y, cut_off):
-
-    pred_positive_label = y_prob
-
-    # AUROC
-    fprs, tprs, threshold = roc_curve(test_y, pred_positive_label)
-    y_pred = np.where(y_prob > cut_off, 1, 0)
-
-    roc_score = auc(fprs, tprs)
-    prc = average_precision_score(test_y, pred_positive_label)
-    accuracy = accuracy_score(test_y, y_pred)
-    prec = precision_score(test_y, y_pred)
-    rec = recall_score(test_y, y_pred)
-    f1 = f1_score(test_y, y_pred)
-    CM = confusion_matrix(test_y, y_pred)
-    TN, FN, TP, FP = CM[0][0], CM[1][0], CM[1][1], CM[0][1]
-    sen = TP/(TP+FN)
-    spe = TN/(TN+FP)
-
-    return roc_score, prc, accuracy, prec, rec, f1, sen, spe
+from module.utils_module import *
 
 def model_test():
-    start = timer()
-    print('')
-    print('Prediction Started at ', dt.datetime.now())
-    print('====='*20)
+
     # for evaluation
     final_df = pd.DataFrame()
     auc_list = []
@@ -62,13 +31,29 @@ def model_test():
     # set model
     model = parser.get('OPTION', 'model')
 
+    logger = set_logger('test', path=result_path)
+    logger.info('*----- SET CONFIGS')
+    logger.info('RESULT_PATH : ' + result_path)
+    logger.info('MODEL_PATH : ' + model_path)
+    logger.info('ML_MODEL : ' + model)
+    logger.info('====='*20)
+    logger.info('*----- Prediction Started at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]')
+    logger.info('====='*20)
+
+    # 실행 명령어 출력
+    logger.info('*----- Python Script command :')
+    logger.info(f'{os.path.basename(__file__)}')
+    logger.info('====='*20)
+    start = timer()
+
     # Test dataset
 
     for model_idx in range(num_sampling):
-        tmp_df = pd.DataFrame()
+
         testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
-        test_x = testset.drop(['label'], axis=1)
+        test_x = testset.drop(['pid', 'label'], axis=1)
         test_y = list(testset['label'])
+        logger.info('Model Inference Proceeding.... Test Experiment ' + str(model_idx+1))
 
         # Import model
         clf = joblib.load(model_path + model + '_' + str(model_idx) + '.pkl') 
@@ -79,41 +64,49 @@ def model_test():
 
         # append result in list
         auc_list.append(pred_result[0])
-        prc_list.append(pred_result[1])
-        acc_list.append(pred_result[2])
-        pre_list.append(pred_result[3])
-        rec_list.append(pred_result[4])
-        f1_list.append(pred_result[5])
-        sen_list.append(pred_result[6])
-        spe_list.append(pred_result[7])
+        # prc_list.append(pred_result[1])
+        # acc_list.append(pred_result[2])
+        # pre_list.append(pred_result[3])
+        # rec_list.append(pred_result[4])
+        # f1_list.append(pred_result[5])
+        # sen_list.append(pred_result[6])
+        # spe_list.append(pred_result[7])
 
-        tmp_df['Prediction'] = y_prob
-        tmp_df['Real'] = test_y
-        tmp_df.to_csv(result_path + 'model_prob/pred_result' + str(model_idx) + '.csv')
+        # confusion_df = pred_result[-2]    # Confusion Matrix Results
+
+        testset['y_prob'] = y_prob
+        testset['y_pred'] = pred_result[-1]
+        testset['Real'] = test_y
+        result_df = testset[['pid', 'y_prob', 'y_pred', 'Real']]
+        result_df.to_csv(result_path + 'model_prob/pred_result' + str(model_idx) + '.csv')
 
     # Save Final Result
     final_df['AUROC'] = auc_list
-    final_df['AUPRC'] = prc_list
-    final_df['Accuracy'] = acc_list
-    final_df['Precision'] = pre_list
-    final_df['Recall'] = rec_list
-    final_df['F1_score'] = f1_list
-    final_df['Sensitivity'] = sen_list
-    final_df['Specificity'] = spe_list
+    # final_df['AUPRC'] = prc_list
+    # final_df['Accuracy'] = acc_list
+    # final_df['Precision'] = pre_list
+    # final_df['Recall'] = rec_list
+    # final_df['F1_score'] = f1_list
+    # final_df['Sensitivity'] = sen_list
+    # final_df['Specificity'] = spe_list
     final_df.to_csv(result_path + model + '_result.csv')
-    
-
-    print('AUROC: ', str(round(np.mean(auc_list),2)) + '(' + str(ci95(auc_list)[0]) + '-' + str(ci95(auc_list)[1]) + ')')
-    print('AUPRC: ',  str(round(np.mean(prc_list),2)) + '(' + str(ci95(prc_list)[0]) + '-' + str(ci95(prc_list)[1]) + ')')
-    print('Accuracy: ',  str(round(np.mean(acc_list),2)) + '(' + str(ci95(acc_list)[0]) + '-' + str(ci95(acc_list)[1]) + ')')
-    print('Precision: ',  str(round(np.mean(pre_list),2)) + '(' + str(ci95(pre_list)[0]) + '-' + str(ci95(pre_list)[1]) + ')')
-    print('Recall: ',  str(round(np.mean(rec_list),2)) + '(' + str(ci95(rec_list)[0]) + '-' + str(ci95(rec_list)[1]) + ')')
-    print('F1-score: ',  str(round(np.mean(f1_list),2)) + '(' + str(ci95(f1_list)[0]) + '-' + str(ci95(f1_list)[1]) + ')')
-    print('Sensitivity: ', str(round(np.mean(sen_list),2)) + '(' + str(ci95(sen_list)[0]) + '-' + str(ci95(sen_list)[1]) + ')')
-    print('Spesificity: ', str(round(np.mean(spe_list),2)) + '(' + str(ci95(spe_list)[0]) + '-' + str(ci95(spe_list)[1]) + ')')
+   
     end = timer()
-    print('====='*20)
-    print('Prediction Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
+
+    logger.info('====='*20)
+    logger.info('*----- FINAL OUTPUT')
+    logger.info('AUROC: ' + str(round(np.mean(auc_list),2)) + '(' + str(ci95(auc_list)[0]) + '-' + str(ci95(auc_list)[1]) + ')')
+    # logger.info('AUPRC: ' + str(round(np.mean(prc_list),2)) + '(' + str(ci95(prc_list)[0]) + '-' + str(ci95(prc_list)[1]) + ')')
+    # logger.info('Accuracy: ' + str(round(np.mean(acc_list),2)) + '(' + str(ci95(acc_list)[0]) + '-' + str(ci95(acc_list)[1]) + ')')
+    # logger.info('Precision: ' + str(round(np.mean(pre_list),2)) + '(' + str(ci95(pre_list)[0]) + '-' + str(ci95(pre_list)[1]) + ')')
+    # logger.info('Recall: ' + str(round(np.mean(rec_list),2)) + '(' + str(ci95(rec_list)[0]) + '-' + str(ci95(rec_list)[1]) + ')')
+    # logger.info('F1-score: ' + str(round(np.mean(f1_list),2)) + '(' + str(ci95(f1_list)[0]) + '-' + str(ci95(f1_list)[1]) + ')')
+    # logger.info('Sensitivity: ' + str(round(np.mean(sen_list),2)) + '(' + str(ci95(sen_list)[0]) + '-' + str(ci95(sen_list)[1]) + ')')
+    # logger.info('Spesificity: ' + str(round(np.mean(spe_list),2)) + '(' + str(ci95(spe_list)[0]) + '-' + str(ci95(spe_list)[1]) + ')')
+
+    logger.info('====='*20)
+
+    logger.info('*----- Prediction Ended at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]' + '\tTime elapsed: ' + f'[ {dt.timedelta(seconds=end-start)} seconds]')
 
     return final_df
 

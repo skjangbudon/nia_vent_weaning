@@ -72,10 +72,10 @@ def data_split():
         # Trainset
         train_pid = train_suc + train_fail
 
-        trainset = dataset[dataset['pid'].isin(train_pid)]
+        trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
         trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-        testset = dataset[~dataset['pid'].isin(train_pid)]
+        testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
         testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
         train_x = trainset.drop(['pid', 'label'], axis=1)
@@ -83,6 +83,10 @@ def data_split():
 
         test_x = testset.drop([ 'pid', 'label'], axis=1)
         test_y = testset['label']
+
+        # pid info
+        train_list = trainset['pid']
+        test_list = testset['pid']
 
         # MICE
         imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
@@ -111,18 +115,25 @@ def data_split():
         test_x = test_imputed.reset_index(drop=True)
         test_y = test_y.reset_index(drop=True)
 
-        trainset = pd.concat([train_x, train_y], axis=1)
-        testset = pd.concat([test_x, test_y], axis=1)
-
-        trainset.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-        testset.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+        final_train = pd.concat([train_x, train_y], axis=1)
+        final_test = pd.concat([test_x, test_y], axis=1)   
+        print(final_train.keys())
+        # add pid
+        final_train['pid'] = train_list
+        final_test['pid'] = test_list
+        
+        final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+        
     end = timer()
     print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
-    return trainset, testset
+    return final_train, final_test
 
 
 def model_train(train_x, train_y, model,  model_idx):
+    start = timer()
+    print('Model Training Started at ', dt.datetime.now())
 
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
@@ -153,6 +164,10 @@ def model_train(train_x, train_y, model,  model_idx):
     file_name = model + '_' + str(model_idx) +'.pkl' 
     joblib.dump(clf, model_path + file_name)
 
+    end = timer()
+    print('Model Training Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
+
+
 
 if __name__ == '__main__':
     parser = ConfigParser()
@@ -163,13 +178,13 @@ if __name__ == '__main__':
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
         data_split()
-        
+
         for model_idx in range(0, num_sampling):
 
             trainset = pd.read_csv(input_data_path + "trainset_" + str(model_idx) + ".csv")
             # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
 
-            train_x = trainset.drop(['label'], axis=1)
+            train_x = trainset.drop(['pid', 'label'], axis=1)
             train_y = trainset[['label']]
 
             model_train(train_x, train_y, model, model_idx)
