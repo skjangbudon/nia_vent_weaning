@@ -13,13 +13,13 @@ def model_test():
     # for evaluation
     final_df = pd.DataFrame()
     auc_list = []
-    prc_list = []
-    acc_list = []
-    pre_list = []
-    rec_list = []
-    f1_list = []
-    sen_list = []
-    spe_list = []
+    # prc_list = []
+    # acc_list = []
+    # pre_list = []
+    # rec_list = []
+    # f1_list = []
+    # sen_list = []
+    # spe_list = []
 
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/test_config.ini')
