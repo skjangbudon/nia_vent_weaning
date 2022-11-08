@@ -65,6 +65,7 @@ def model_test():
     # Test dataset
 
     for model_idx in range(num_sampling):
+        tmp_df = pd.DataFrame()
         testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
         test_x = testset.drop(['label'], axis=1)
         test_y = list(testset['label'])
@@ -86,6 +87,10 @@ def model_test():
         sen_list.append(pred_result[6])
         spe_list.append(pred_result[7])
 
+        tmp_df['Prediction'] = y_prob
+        tmp_df['Real'] = test_y
+        tmp_df.to_csv(result_path + 'model_prob/pred_result' + str(model_idx) + '.csv')
+
     # Save Final Result
     final_df['AUROC'] = auc_list
     final_df['AUPRC'] = prc_list
@@ -96,6 +101,7 @@ def model_test():
     final_df['Sensitivity'] = sen_list
     final_df['Specificity'] = spe_list
     final_df.to_csv(result_path + model + '_result.csv')
+    
 
     print('AUROC: ', str(round(np.mean(auc_list),2)) + '(' + str(ci95(auc_list)[0]) + '-' + str(ci95(auc_list)[1]) + ')')
     print('AUPRC: ',  str(round(np.mean(prc_list),2)) + '(' + str(ci95(prc_list)[0]) + '-' + str(ci95(prc_list)[1]) + ')')
