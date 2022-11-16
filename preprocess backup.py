@@ -5,7 +5,7 @@ from module.dataset import *
 
 # Integration Total dataset
 
-def get_final_input():
+def get_final_input(data_path, input_window):
     
     # Set Config
     parser = ConfigParser()
@@ -15,12 +15,12 @@ def get_final_input():
     input_window = parser.get('OPTION', 'input_length')
 
     # import data
-    label_df = get_label(raw_path)
-    vital = get_vital(raw_path)
-    lab = get_lab(raw_path)
-    height = get_height_weight(raw_path)
-    ventil_param = get_vetil_param(raw_path)
-    drug = get_drug(raw_path)
+    label_df = get_label(data_path)
+    vital = get_vital(data_path)
+    lab = get_lab(data_path)
+    height = get_height_weight(data_path)
+    ventil_param = get_vetil_param(data_path)
+    drug = get_drug(data_path)
 
     # # numeric 변수 4개 붙이기
     data_df = pd.concat([vital, lab], axis=0)
@@ -40,7 +40,7 @@ def get_final_input():
     ventil_var= list(set(ventil_param.item))[:-1]
     drug_var = list(set(drug.drug_name))
 
-    for before_time in tqdm.tqdm(range(0, 3)):
+    for before_time in range(0, 3):
 
         results = dict()
         results['vent_end'] = []
@@ -206,7 +206,7 @@ def preprocessing(input_window):
     input_window = parser.get('OPTION', 'input_length')
 
     # label_df
-    label = dataset.get_label(data_path + 'integrated_data/')
+    label = dataset.get_label(data_path + 'integrated_data/before/')
     data_dir = data_path + 'model_data/' + str(input_window) + 'h/'
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
     df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
