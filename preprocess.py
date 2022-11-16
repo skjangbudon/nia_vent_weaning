@@ -10,7 +10,7 @@ def get_final_input(data_path, input_window):
     # Set Config
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
-    data_path = parser.get('PATH', 'data_path')
+    raw_path = parser.get('PATH', 'raw_path')
     dst_path = parser.get('PATH', 'dst_path')
     input_window = parser.get('OPTION', 'input_length')
 
