@@ -1,5 +1,5 @@
 # Preprocessing Python Script
-import pandas as pd
+import pandas as pd, os
 from configparser import ConfigParser
 from module.dataset import *
 
@@ -9,7 +9,8 @@ def get_final_input():
     
     # Set Config
     parser = ConfigParser()
-    parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
+    # parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
+    parser.read('./config/train_config.ini')
     raw_path = parser.get('PATH', 'raw_path')
     dst_path = parser.get('PATH', 'dst_path')
     input_window = parser.get('OPTION', 'input_length')
@@ -73,7 +74,7 @@ def get_final_input():
 
             results['vent_end'].append(label_df.mv_endtime[idx])
             input_end = label_df.mv_endtime[idx] - timedelta(hours=before_time)
-            input_st = input_end - timedelta(hours=input_window)
+            input_st = input_end - timedelta(hours=int(input_window))
 
             results['st_time'].append(input_st)
             results['end_time'].append(input_end)
@@ -187,9 +188,14 @@ def get_final_input():
                             vt_rst = round(np.mean(tmp_list2),3)
 
                     results[vt].append(vt_rst)
-            
+                
+        new_dir = dst_path + str(input_window) + 'h/'
+
+        if not(os.path.isdir(new_dir)):
+            os.mkdir(new_dir)
+
         final_df = pd.DataFrame.from_dict(results)
-        final_df.to_csv(dst_path + 'model_data/' + str(input_window) + 'h/' + str(before_time)  + 'h_data.csv')
+        final_df.to_csv(new_dir + str(before_time)  + 'h_data.csv')
 
     return final_df
 
