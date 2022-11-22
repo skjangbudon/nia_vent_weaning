@@ -28,7 +28,7 @@ def data_split():
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     data_dir = parser.get('PATH', 'data_path')
     input_data_path = parser.get('PATH', 'input_data_path')
-    num_sampling = int(parser.get('OPTION', 'num_sampling'))
+    s_i = int(parser.get('OPTION', 'num_sampling'))
     input_window = parser.get('OPTION', 'input_length')
 
     start = timer()
@@ -62,69 +62,68 @@ def data_split():
     fail_group = list(set(dataset[dataset['label']==1]['pid']))
     
     # Random Sampling
-    for s_i in tqdm.tqdm(range(0, num_sampling)):
-        print('Sampling index : ', s_i + 1)
-        random.seed(s_i)
+    print('Sampling index : ', s_i + 1)
+    random.seed(s_i)
 
-        train_suc = random.sample(success_group, int(len(success_group)*0.8))
-        train_fail = random.sample(fail_group, int(len(fail_group)*0.8))
+    train_suc = random.sample(success_group, int(len(success_group)*0.8))
+    train_fail = random.sample(fail_group, int(len(fail_group)*0.8))
 
-        # Trainset
-        train_pid = train_suc + train_fail
+    # Trainset
+    train_pid = train_suc + train_fail
 
-        trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
-        trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
+    trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
+    trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-        testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
-        testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
+    testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
+    testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-        train_x = trainset.drop(['pid', 'label'], axis=1)
-        train_y = trainset['label']
+    train_x = trainset.drop(['pid', 'label'], axis=1)
+    train_y = trainset['label']
 
-        test_x = testset.drop([ 'pid', 'label'], axis=1)
-        test_y = testset['label']
+    test_x = testset.drop([ 'pid', 'label'], axis=1)
+    test_y = testset['label']
 
-        # pid info
-        train_list = trainset['pid']
-        test_list = testset['pid']
+    # pid info
+    train_list = trainset['pid']
+    test_list = testset['pid']
 
-        # MICE
-        imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
+    # MICE
+    imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
 
-        # TRAIN imputation
-        data = train_x
-        feature = train_x.keys()
-        imp.fit(data)
-        data_r = imp.transform(data)
-        data_imputed = pd.DataFrame(data_r)
-        data_imputed.columns = feature
-        train_imputed = data_imputed
+    # TRAIN imputation
+    data = train_x
+    feature = train_x.keys()
+    imp.fit(data)
+    data_r = imp.transform(data)
+    data_imputed = pd.DataFrame(data_r)
+    data_imputed.columns = feature
+    train_imputed = data_imputed
 
-        # TEST imputation
-        data = test_x
-        feature = test_x.keys()
-        imp.fit(data)
-        data_r = imp.transform(data)
-        data_imputed = pd.DataFrame(data_r)
-        data_imputed.columns = feature
-        test_imputed = data_imputed
+    # TEST imputation
+    data = test_x
+    feature = test_x.keys()
+    imp.fit(data)
+    data_r = imp.transform(data)
+    data_imputed = pd.DataFrame(data_r)
+    data_imputed.columns = feature
+    test_imputed = data_imputed
 
-        # reset index
-        train_x = train_imputed.reset_index(drop=True)
-        train_y = train_y.reset_index(drop=True)
-        test_x = test_imputed.reset_index(drop=True)
-        test_y = test_y.reset_index(drop=True)
+    # reset index
+    train_x = train_imputed.reset_index(drop=True)
+    train_y = train_y.reset_index(drop=True)
+    test_x = test_imputed.reset_index(drop=True)
+    test_y = test_y.reset_index(drop=True)
 
-        final_train = pd.concat([train_x, train_y], axis=1)
-        final_test = pd.concat([test_x, test_y], axis=1)   
-        print(final_train.keys())
-        # add pid
-        final_train['pid'] = train_list
-        final_test['pid'] = test_list
-        
-        final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-        final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
-        
+    final_train = pd.concat([train_x, train_y], axis=1)
+    final_test = pd.concat([test_x, test_y], axis=1)   
+    print(final_train.keys())
+    # add pid
+    final_train['pid'] = train_list
+    final_test['pid'] = test_list
+    
+    final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+    final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+    
     end = timer()
     print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
@@ -168,35 +167,30 @@ def model_train(train_x, train_y, model,  model_idx):
     print('Model Training Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
 
-
 if __name__ == '__main__':
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     input_data_path = parser.get('PATH', 'input_data_path')
-    num_sampling = int(parser.get('OPTION', 'num_sampling'))
+    s_i = int(parser.get('OPTION', 'num_sampling'))
     model =  parser.get('OPTION', 'model')
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
         data_split()
 
-        for model_idx in range(0, num_sampling):
+        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
 
-            trainset = pd.read_csv(input_data_path + "trainset_" + str(model_idx) + ".csv")
-            # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
+        train_x = trainset.drop(['pid', 'label'], axis=1)
+        train_y = trainset[['label']]
 
-            train_x = trainset.drop(['pid', 'label'], axis=1)
-            train_y = trainset[['label']]
-
-            model_train(train_x, train_y, model, model_idx)
+        model_train(train_x, train_y, model, s_i)
 
     else:
 
-        for model_idx in range(0, num_sampling):
+        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
 
-            trainset = pd.read_csv(input_data_path + "trainset_" + str(model_idx) + ".csv")
-            # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
+        train_x = trainset.drop(['label'], axis=1)
+        train_y = trainset[['label']]
 
-            train_x = trainset.drop(['label'], axis=1)
-            train_y = trainset[['label']]
-
-            model_train(train_x, train_y, model, model_idx)
+        model_train(train_x, train_y, model, s_i)
