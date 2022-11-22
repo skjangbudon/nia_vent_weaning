@@ -36,12 +36,17 @@ def get_vetil_param(data_path):
 
     t_aj = ventil_param[ventil_param['hospital_id']==2]
     t_snu = ventil_param[ventil_param['hospital_id']==1]
+    t_ys = ventil_param[ventil_param['hospital_id']==4]
+
     a = set(t_snu.parameter)
     b = set(t_aj.parameter)
+    c = set(t_ys.parameter)
+
     set1 = a
     set2 = b
+    set3 = c
 
-    final_vent_param = list(set1 & set2)
+    final_vent_param = list(set1 & set2 & set3)
     ventil_param = ventil_param[ventil_param['parameter'].isin(final_vent_param)]
     ventil_param = ventil_param[['hospital_id', 'patient_id', 'hadm_id', 'mv_id', 'parameter', 'parameter_datetime', 'value', 'valuenum', 'unit']]
     ventil_param.columns = ['hospital_id', 'patient_id', 'hadm_id', 'mv_id', 'item', 'charttime', 'value', 'valuenum', 'unit']

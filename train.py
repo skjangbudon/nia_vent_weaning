@@ -21,14 +21,14 @@ def data_split():
         Input
             1. dataset : Total dataset
             2. input_window : Data Length
-            3. num_sampling : Number of Random Sampling
+            3. seed : Seed Number
             4. dst_dir : split data destination
     '''
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     data_dir = parser.get('PATH', 'data_path')
     input_data_path = parser.get('PATH', 'input_data_path')
-    s_i = int(parser.get('OPTION', 'num_sampling'))
+    s_i = int(parser.get('OPTION', 'seed'))
     input_window = parser.get('OPTION', 'input_length')
 
     start = timer()
@@ -39,11 +39,11 @@ def data_split():
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
     df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
     df3 = pd.read_csv(data_dir + '2h_data.csv', index_col=0)
-
     dataset = pd.concat([df1, df2, df3], axis=0)
+
     dataset['icu_type'] = dataset['icu_type'].astype(str)
 
-    ignore_features = ['morphine', 'morphine', 'midazolam', 'vasopressin', 'dopamine', 'propofol', 'dobutamine', \
+    ignore_features = ['midazolam', 'vasopressin', 'dopamine', 'propofol', 'dobutamine', \
     'epinephrine', 'dexmedetomidine','norepinephrine', 'remifentanil', 'BT_mean', 'BT_std', 'Ventilator_Tidal volume(setting)']
     # dataset = dataset.fillna(1111)
     dataset = dataset.drop(columns=ignore_features, axis=1)
@@ -52,10 +52,13 @@ def data_split():
     dataset = dataset.iloc[:, 3: ]
 
     # Dummy Variables
-    icu_cat_df = pd.get_dummies(dataset['icu_type'])
+    # icu_cat_df = pd.get_dummies(dataset['icu_type'])
+    # dataset = dataset.drop(columns=['icu_type','Ventilator mode(setting)'], axis=1)
+
     vt_set_df = pd.get_dummies(dataset['Ventilator mode(setting)'])
-    dataset = dataset.drop(columns=['icu_type','Ventilator mode(setting)'], axis=1)
-    dataset = pd.concat([dataset, icu_cat_df,vt_set_df], axis=1)
+    dataset = dataset.drop(columns=['Ventilator mode(setting)'], axis=1)
+    # dataset = pd.concat([dataset, icu_cat_df,vt_set_df], axis=1)
+    dataset = pd.concat([dataset, vt_set_df], axis=1)
 
     # Set Case and Control group
     success_group = list(set(dataset[dataset['label']==0]['pid']))
@@ -117,6 +120,7 @@ def data_split():
     final_train = pd.concat([train_x, train_y], axis=1)
     final_test = pd.concat([test_x, test_y], axis=1)   
     print(final_train.keys())
+
     # add pid
     final_train['pid'] = train_list
     final_test['pid'] = test_list
@@ -171,7 +175,7 @@ if __name__ == '__main__':
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     input_data_path = parser.get('PATH', 'input_data_path')
-    s_i = int(parser.get('OPTION', 'num_sampling'))
+    s_i = int(parser.get('OPTION', 'seed'))
     model =  parser.get('OPTION', 'model')
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
@@ -188,7 +192,6 @@ if __name__ == '__main__':
     else:
 
         trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-        # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
 
         train_x = trainset.drop(['label'], axis=1)
         train_y = trainset[['label']]
