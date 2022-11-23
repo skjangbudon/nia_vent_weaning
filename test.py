@@ -10,17 +10,6 @@ from module.utils_module import *
 
 def model_test():
 
-    # for evaluation
-    final_df = pd.DataFrame()
-    auc_list = []
-    # prc_list = []
-    # acc_list = []
-    # pre_list = []
-    # rec_list = []
-    # f1_list = []
-    # sen_list = []
-    # spe_list = []
-
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/test_config.ini')
     # set path
@@ -46,58 +35,58 @@ def model_test():
     logger.info('====='*20)
     start = timer()
 
-    # Test dataset
-    testset = pd.read_csv(input_data_path + "testset_" + str(s_i) + ".csv")
-    test_x = testset.drop(['pid', 'label'], axis=1)
-    test_y = list(testset['label'])
-    logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i+1))
-
-    # Import model
-    clf = joblib.load(model_path + model + '_' + str(s_i) + '.pkl') 
-    # prediction
-    y_prob = clf.predict_proba(test_x)[:,1]
-
-    pred_result = evaluation(y_prob, test_y, cut_off=0.1)
-
-    # append result in list
-    auc_list.append(pred_result[0])
-    # prc_list.append(pred_result[1])
-    # acc_list.append(pred_result[2])
-    # pre_list.append(pred_result[3])
-    # rec_list.append(pred_result[4])
-    # f1_list.append(pred_result[5])
-    # sen_list.append(pred_result[6])
-    # spe_list.append(pred_result[7])
-
-    # confusion_df = pred_result[-2]    # Confusion Matrix Results
-
-    testset['y_prob'] = y_prob
-    testset['y_pred'] = pred_result[-1]
-    testset['Real'] = test_y
-    result_df = testset[['pid', 'y_prob', 'y_pred', 'Real']]
-    result_df.to_csv(result_path + 'model_prob/pred_result' + str(s_i) + '.csv')
-
-    # Save Final Result
-    final_df['AUROC'] = auc_list
-    # final_df['AUPRC'] = prc_list
-    # final_df['Accuracy'] = acc_list
-    # final_df['Precision'] = pre_list
-    # final_df['Recall'] = rec_list
-    # final_df['F1_score'] = f1_list
-    # final_df['Sensitivity'] = sen_list
-    # final_df['Specificity'] = spe_list
-    final_df.to_csv(result_path + model + '_result.csv')
-   
-    end = timer()
-
-    logger.info('====='*20)
-    logger.info('*----- FINAL OUTPUT')
-    logger.info('AUROC: ' + str(round(np.mean(auc_list),2)) + '(' + str(ci95(auc_list)[0]) + '-' + str(ci95(auc_list)[1]) + ')')
+    for s_i in range(0, 30):
 
 
-    logger.info('====='*20)
+        # for evaluation
+        final_df = pd.DataFrame()
+        auc_list = []
 
-    logger.info('*----- Prediction Ended at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]' + '\tTime elapsed: ' + f'[ {dt.timedelta(seconds=end-start)} seconds]')
+        # Test dataset
+        testset = pd.read_csv(input_data_path + "testset_" + str(s_i) + ".csv")
+
+        test_x = testset.drop(['pid', 'label']+ignore_list, axis=1)
+        test_y = list(testset['label'])
+        logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i))
+
+        # Import model
+        clf = joblib.load(model_path + model + '_' + str(s_i) + '.pkl') 
+        # prediction
+        y_prob = clf.predict_proba(test_x)[:,1]
+        pred_result = evaluation(y_prob, test_y, cut_off=0.1)
+
+        # append result in list
+        auc_list.append(pred_result[0])
+
+        # confusion_df = pred_result[-2]    # Confusion Matrix Results
+
+        testset['y_prob'] = y_prob
+        testset['y_pred'] = pred_result[-1]
+        testset['Real'] = test_y
+        result_df = testset[['pid', 'y_prob', 'y_pred', 'Real']]
+        # result_df.to_csv(result_path + 'model_prob/pred_result_' + str(s_i) + '.csv')
+
+        # Save Final Result
+        # final_df['AUROC'] = auc_list
+        # final_df.to_csv(result_path + model + '_result.csv')
+
+        end = timer()
+
+        # logger.info('====='*20)
+        # logger.info('*----- FINAL OUTPUT')
+        logger.info('AUROC: ' + str(round(np.mean(auc_list),2)))
+
+
+        # Confusion Matrix
+        # logger.info('====='*20)
+        # logger.info('*----- CREATE CONFUSION MATRIX')
+        cm = confusion_matrix(test_y, pred_result[-1])
+        cm_df = pd.DataFrame(cm)
+        # cm_df.to_csv(result_path + 'Confusion_Matrix.csv')
+
+        # logger.info('====='*20)
+
+        # logger.info('*----- Prediction Ended at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]' + '\tTime elapsed: ' + f'[ {dt.timedelta(seconds=end-start)} seconds]')
 
     return final_df
 

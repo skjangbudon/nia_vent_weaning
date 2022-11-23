@@ -6,7 +6,7 @@ import logging
 
 from configparser import ConfigParser
 from timeit import default_timer as timer
-from sklearn.metrics  import f1_score, recall_score, confusion_matrix, precision_score, average_precision_score, roc_curve, accuracy_score, auc
+from sklearn.metrics  import f1_score, recall_score, confusion_matrix, precision_score, average_precision_score, roc_curve, accuracy_score, auc, roc_auc_score
 
 # 95% CI function
 def ci95(inp):
@@ -23,7 +23,8 @@ def evaluation(y_prob, test_y, cut_off):
     fprs, tprs, threshold = roc_curve(test_y, pred_positive_label)
     y_pred = np.where(y_prob > cut_off, 1, 0)
 
-    roc_score = auc(fprs, tprs)
+    # roc_score = auc(fprs, tprs)
+    roc_score = roc_auc_score(test_y, y_pred, average='micro')
     prc = average_precision_score(test_y, pred_positive_label)
     accuracy = accuracy_score(test_y, y_pred)
     prec = precision_score(test_y, y_pred)

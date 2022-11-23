@@ -28,7 +28,7 @@ def data_split():
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     data_dir = parser.get('PATH', 'data_path')
     input_data_path = parser.get('PATH', 'input_data_path')
-    s_i = int(parser.get('OPTION', 'seed'))
+    # s_i = int(parser.get('OPTION', 'seed'))
     input_window = parser.get('OPTION', 'input_length')
 
     start = timer()
@@ -37,15 +37,14 @@ def data_split():
 
     data_dir = '/VOLUME/nia_vent_weaning/data/model_data/' + str(input_window) + 'h/'
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
-    df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
-    df3 = pd.read_csv(data_dir + '2h_data.csv', index_col=0)
-    dataset = pd.concat([df1, df2, df3], axis=0)
+    # df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
+    # df3 = pd.read_csv(data_dir + '2h_data.csv', index_col=0)
+    # dataset = pd.concat([df1, df2, df3], axis=0)
 
+    dataset = df1
     dataset['icu_type'] = dataset['icu_type'].astype(str)
 
-    ignore_features = ['midazolam', 'vasopressin', 'dopamine', 'propofol', 'dobutamine', \
-    'epinephrine', 'dexmedetomidine','norepinephrine', 'remifentanil', 'BT_mean', 'BT_std', 'Ventilator_Tidal volume(setting)']
-    # dataset = dataset.fillna(1111)
+    ignore_features = ['midazolam', 'vasopressin', 'dopamine', 'propofol', 'dobutamine', 'epinephrine', 'dexmedetomidine','norepinephrine', 'remifentanil', 'BT_mean', 'BT_std', 'Ventilator_Tidal volume(setting)']
     dataset = dataset.drop(columns=ignore_features, axis=1)
 
     # 불필요한 컬럼 제거
@@ -64,72 +63,76 @@ def data_split():
     success_group = list(set(dataset[dataset['label']==0]['pid']))
     fail_group = list(set(dataset[dataset['label']==1]['pid']))
     
-    # Random Sampling
-    print('Sampling index : ', s_i + 1)
-    random.seed(s_i)
 
-    train_suc = random.sample(success_group, int(len(success_group)*0.8))
-    train_fail = random.sample(fail_group, int(len(fail_group)*0.8))
+    for s_i in range(0,30):
+        
+        ignore_features = ['pid', 'label', 'icu_type']
+        # Random Sampling
+        print('Sampling index : ', s_i)
+        random.seed(s_i)
 
-    # Trainset
-    train_pid = train_suc + train_fail
+        train_suc = random.sample(success_group, int(len(success_group)*0.8))
+        train_fail = random.sample(fail_group, int(len(fail_group)*0.8))
 
-    trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
-    trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
+        # Trainset
+        train_pid = train_suc + train_fail
 
-    testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
-    testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
+        trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
+        # trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-    train_x = trainset.drop(['pid', 'label'], axis=1)
-    train_y = trainset['label']
+        testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
+        # testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-    test_x = testset.drop([ 'pid', 'label'], axis=1)
-    test_y = testset['label']
+        train_x = trainset.drop(ignore_features, axis=1)
+        train_y = trainset['label']
 
-    # pid info
-    train_list = trainset['pid']
-    test_list = testset['pid']
+        test_x = testset.drop(ignore_features, axis=1)
+        test_y = testset['label']
 
-    # MICE
-    imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
+        # pid info
+        train_list = trainset['pid']
+        test_list = testset['pid']
 
-    # TRAIN imputation
-    data = train_x
-    feature = train_x.keys()
-    imp.fit(data)
-    data_r = imp.transform(data)
-    data_imputed = pd.DataFrame(data_r)
-    data_imputed.columns = feature
-    train_imputed = data_imputed
+        # MICE
+        imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
 
-    # TEST imputation
-    data = test_x
-    feature = test_x.keys()
-    imp.fit(data)
-    data_r = imp.transform(data)
-    data_imputed = pd.DataFrame(data_r)
-    data_imputed.columns = feature
-    test_imputed = data_imputed
+        # TRAIN imputation
+        data = train_x
+        feature = train_x.keys()
+        imp.fit(data)
+        data_r = imp.transform(data)
+        data_imputed = pd.DataFrame(data_r)
+        data_imputed.columns = feature
+        train_imputed = data_imputed
 
-    # reset index
-    train_x = train_imputed.reset_index(drop=True)
-    train_y = train_y.reset_index(drop=True)
-    test_x = test_imputed.reset_index(drop=True)
-    test_y = test_y.reset_index(drop=True)
+        # TEST imputation
+        data = test_x
+        feature = test_x.keys()
+        imp.fit(data)
+        data_r = imp.transform(data)
+        data_imputed = pd.DataFrame(data_r)
+        data_imputed.columns = feature
+        test_imputed = data_imputed
 
-    final_train = pd.concat([train_x, train_y], axis=1)
-    final_test = pd.concat([test_x, test_y], axis=1)   
-    print(final_train.keys())
+        # reset index
+        train_x = train_imputed.reset_index(drop=True)
+        train_y = train_y.reset_index(drop=True)
+        test_x = test_imputed.reset_index(drop=True)
+        test_y = test_y.reset_index(drop=True)
 
-    # add pid
-    final_train['pid'] = train_list
-    final_test['pid'] = test_list
-    
-    final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-    final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
-    
-    end = timer()
-    print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
+        final_train = pd.concat([train_x, train_y], axis=1)
+        final_test = pd.concat([test_x, test_y], axis=1)   
+        print(final_train.keys())
+
+        # add pid
+        final_train['pid'] = train_list
+        final_test['pid'] = test_list
+        
+        final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+        
+        end = timer()
+        print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
     return final_train, final_test
 
@@ -152,7 +155,7 @@ def model_train(train_x, train_y, model,  model_idx):
         clf = LogisticRegression(C=1, penalty='l1', solver='liblinear')
     
     elif model == 'RF':
-        clf = RandomForestClassifier(n_estimators=150, max_depth=11,random_state=0)
+        clf = RandomForestClassifier(n_estimators=150, max_depth=11,random_state=0, class_weight='balanced') # class_weight='balanced'
     
     elif model == 'lgbm':
         clf = LGBMClassifier(n_estimators=1500, num_leaves=31, boosting_type='gbdt', metric='binary_logloss',
@@ -171,6 +174,12 @@ def model_train(train_x, train_y, model,  model_idx):
     print('Model Training Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
 
+
+
+
+
+
+
 if __name__ == '__main__':
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
@@ -180,20 +189,23 @@ if __name__ == '__main__':
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
         data_split()
+        
+        for s_i in range(0, 30):
 
-        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-        # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
+            trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+            # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
 
-        train_x = trainset.drop(['pid', 'label'], axis=1)
-        train_y = trainset[['label']]
+            train_x = trainset.drop(['pid', 'label'], axis=1)
+            train_y = trainset[['label']]
 
-        model_train(train_x, train_y, model, s_i)
+            model_train(train_x, train_y, model, s_i)
 
     else:
 
-        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        for s_i in range(0, 30):
+            
+            trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+            train_x = trainset.drop(['label', 'pid'], axis=1)
+            train_y = trainset[['label']]
 
-        train_x = trainset.drop(['label'], axis=1)
-        train_y = trainset[['label']]
-
-        model_train(train_x, train_y, model, s_i)
+            model_train(train_x, train_y, model, s_i)
