@@ -1,12 +1,13 @@
 # Python Script for Testing
 import numpy as np, pandas as pd
-import joblib
+import joblib, os
 from configparser import ConfigParser
 import datetime as dt
 from timeit import default_timer as timer
 from pytz import timezone
 # Evaluation
-from module.utils_module import *
+from module.utils_module import evaluation, get_logger, set_logger
+from sklearn.metrics  import confusion_matrix
 
 def model_test():
 
@@ -33,62 +34,55 @@ def model_test():
     logger.info('*----- Python Script command :')
     logger.info(f'{os.path.basename(__file__)}')
     logger.info('====='*20)
-    start = timer()
+    start = timer() 
 
-    for s_i in range(0, 30):
+    # for evaluation
+    # final_df = pd.DataFrame()
+    auc_list = []
 
+    # Test dataset
+    testset = pd.read_csv(input_data_path + "testset_" + str(s_i) + ".csv")
 
-        # for evaluation
-        final_df = pd.DataFrame()
-        auc_list = []
+    test_x = testset.drop(['pid', 'label'], axis=1)
+    test_y = list(testset['label'])
+    logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i))
 
-        # Test dataset
-        testset = pd.read_csv(input_data_path + "testset_" + str(s_i) + ".csv")
+    # Import model
+    clf = joblib.load(model_path + model + '_' + str(s_i) + '.pkl') 
+    # prediction
+    y_prob = clf.predict_proba(test_x)[:,1]
+    pred_result = evaluation(y_prob, test_y, cut_off=0.5)
 
-        test_x = testset.drop(['pid', 'label'], axis=1)
-        test_y = list(testset['label'])
-        logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i))
+    # append result in list
+    auc_list.append(pred_result[0])
 
-        # Import model
-        clf = joblib.load(model_path + model + '_' + str(s_i) + '.pkl') 
-        # prediction
-        y_prob = clf.predict_proba(test_x)[:,1]
-        pred_result = evaluation(y_prob, test_y, cut_off=0.1)
+    # confusion_df = pred_result[-2]    # Confusion Matrix Results
 
-        # append result in list
-        auc_list.append(pred_result[0])
+    testset['y_prob'] = y_prob
+    testset['y_pred'] = pred_result[-1]
+    testset['Real'] = test_y
+    result_df = testset[['pid', 'y_prob', 'y_pred', 'Real']]
+    result_df.to_csv(result_path + 'model_prob/pred_result_' + str(s_i) + '.csv')
 
-        # confusion_df = pred_result[-2]    # Confusion Matrix Results
+    # Save Final Result
+    # final_df['AUROC'] = auc_list
+    # final_df.to_csv(result_path + model + '_result.csv')
 
-        testset['y_prob'] = y_prob
-        testset['y_pred'] = pred_result[-1]
-        testset['Real'] = test_y
-        result_df = testset[['pid', 'y_prob', 'y_pred', 'Real']]
-        # result_df.to_csv(result_path + 'model_prob/pred_result_' + str(s_i) + '.csv')
+    end = timer()
 
-        # Save Final Result
-        # final_df['AUROC'] = auc_list
-        # final_df.to_csv(result_path + model + '_result.csv')
+    logger.info('====='*20)
+    logger.info('*----- FINAL OUTPUT')
+    logger.info('AUROC: ' + str(round(np.mean(auc_list),2)))
 
-        end = timer()
+    # Confusion Matrix
+    logger.info('====='*20)
+    logger.info('*----- CREATE CONFUSION MATRIX')
+    cm = confusion_matrix(test_y, pred_result[-1])
+    cm_df = pd.DataFrame(cm)
+    cm_df.to_csv(result_path + 'Confusion_Matrix.csv')
 
-        # logger.info('====='*20)
-        # logger.info('*----- FINAL OUTPUT')
-        logger.info('AUROC: ' + str(round(np.mean(auc_list),2)))
-
-
-        # Confusion Matrix
-        # logger.info('====='*20)
-        # logger.info('*----- CREATE CONFUSION MATRIX')
-        cm = confusion_matrix(test_y, pred_result[-1])
-        cm_df = pd.DataFrame(cm)
-        # cm_df.to_csv(result_path + 'Confusion_Matrix.csv')
-
-        # logger.info('====='*20)
-
-        # logger.info('*----- Prediction Ended at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]' + '\tTime elapsed: ' + f'[ {dt.timedelta(seconds=end-start)} seconds]')
-
-    return final_df
+    logger.info('====='*20)
+    logger.info('*----- Prediction Ended at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]' + '\tTime elapsed: ' + f'[ {dt.timedelta(seconds=end-start)} seconds]')
 
 
 if __name__ == '__main__':

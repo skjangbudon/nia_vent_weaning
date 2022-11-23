@@ -9,6 +9,8 @@ input_data/
 **/*.log
 *.csv
 output/
+model/
+*.pkl
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,pycharm,python,jupyternotebooks,windows,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,pycharm,python,jupyternotebooks,windows,visualstudiocode

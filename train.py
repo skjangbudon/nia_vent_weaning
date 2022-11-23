@@ -16,7 +16,7 @@ from sklearn.impute import IterativeImputer
 
 warnings.filterwarnings('ignore')
 
-def data_split():
+def data_split(imp_method):
     '''
         Input
             1. dataset : Total dataset
@@ -28,7 +28,7 @@ def data_split():
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
     data_dir = parser.get('PATH', 'data_path')
     input_data_path = parser.get('PATH', 'input_data_path')
-    # s_i = int(parser.get('OPTION', 'seed'))
+    s_i = int(parser.get('OPTION', 'seed'))
     input_window = parser.get('OPTION', 'input_length')
 
     start = timer()
@@ -37,11 +37,10 @@ def data_split():
 
     data_dir = '/VOLUME/nia_vent_weaning/data/model_data/' + str(input_window) + 'h/'
     df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
-    # df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
-    # df3 = pd.read_csv(data_dir + '2h_data.csv', index_col=0)
-    # dataset = pd.concat([df1, df2, df3], axis=0)
+    df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
+    df3 = pd.read_csv(data_dir + '2h_data.csv', index_col=0)
+    dataset = pd.concat([df1, df2, df3], axis=0)
 
-    dataset = df1
     dataset['icu_type'] = dataset['icu_type'].astype(str)
 
     ignore_features = ['midazolam', 'vasopressin', 'dopamine', 'propofol', 'dobutamine', 'epinephrine', 'dexmedetomidine','norepinephrine', 'remifentanil', 'BT_mean', 'BT_std', 'Ventilator_Tidal volume(setting)']
@@ -58,43 +57,51 @@ def data_split():
     dataset = dataset.drop(columns=['Ventilator mode(setting)'], axis=1)
     # dataset = pd.concat([dataset, icu_cat_df,vt_set_df], axis=1)
     dataset = pd.concat([dataset, vt_set_df], axis=1)
+    dataset['pid'] = dataset['pid'].astype(str)
 
-    # Set Case and Control group
+    # Set Case and Control group                                                                # numpy sampling
     success_group = list(set(dataset[dataset['label']==0]['pid']))
     fail_group = list(set(dataset[dataset['label']==1]['pid']))
-    
+    success_group.sort()
+    fail_group.sort()
 
-    for s_i in range(0,30):
-        
-        ignore_features = ['pid', 'label', 'icu_type']
-        # Random Sampling
-        print('Sampling index : ', s_i)
-        random.seed(s_i)
+    # success_group = dataset[dataset['label']==0]['pid'].tolist()
+    # fail_group = dataset[dataset['label']==1]['pid'].tolist()
 
-        train_suc = random.sample(success_group, int(len(success_group)*0.8))
-        train_fail = random.sample(fail_group, int(len(fail_group)*0.8))
+    ignore_features = ['pid', 'label', 'icu_type']
+    # Random Sampling
+    print('Sampling index : ', s_i)
 
-        # Trainset
-        train_pid = train_suc + train_fail
+    # np.random.seed(s_i)        
+    # train_suc = list(np.random.choice(success_group, int(len(success_group)*0.8)))  # positive
+    # train_fail = list(np.random.choice(fail_group, int(len(fail_group)*0.8)))       # negative
 
-        trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
-        # trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
+    random.seed(s_i)
+    train_suc = random.sample(success_group, int(len(success_group)*0.8))
+    train_fail = random.sample(fail_group, int(len(fail_group)*0.8))
 
-        testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
-        # testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
+    # Trainset
+    train_pid = list(set(train_suc + train_fail))
 
-        train_x = trainset.drop(ignore_features, axis=1)
-        train_y = trainset['label']
+    trainset = dataset[dataset['pid'].isin(train_pid)].reset_index(drop=True)
+    # trainset = trainset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-        test_x = testset.drop(ignore_features, axis=1)
-        test_y = testset['label']
+    testset = dataset[~dataset['pid'].isin(train_pid)].reset_index(drop=True)
+    # testset = testset.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
 
-        # pid info
-        train_list = trainset['pid']
-        test_list = testset['pid']
+    train_x = trainset.drop(ignore_features, axis=1)
+    train_y = trainset['label']
 
+    test_x = testset.drop(ignore_features, axis=1)
+    test_y = testset['label']
+
+    # pid info
+    train_list = trainset['pid']
+    test_list = testset['pid']
+
+    if imp_method == 'MICE':
         # MICE
-        imp = IterativeImputer(max_iter=30, random_state=0, min_value = 0)
+        imp = IterativeImputer(max_iter=10, random_state=0, min_value = 0)
 
         # TRAIN imputation
         data = train_x
@@ -122,17 +129,28 @@ def data_split():
 
         final_train = pd.concat([train_x, train_y], axis=1)
         final_test = pd.concat([test_x, test_y], axis=1)   
-        print(final_train.keys())
 
-        # add pid
-        final_train['pid'] = train_list
-        final_test['pid'] = test_list
-        
-        final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-        final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
-        
-        end = timer()
-        print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
+    elif imp_method == 'outlier':       # Outlier Imputation
+        train_x = train_x.fillna(-100)
+        test_x = test_x.fillna(-100)
+
+        final_train = pd.concat([train_x, train_y], axis=1)
+        final_test = pd.concat([test_x, test_y], axis=1)   
+
+    # print(final_train.keys())
+
+    # add pid
+    final_train['pid'] = train_list
+    final_test['pid'] = test_list
+
+    final_train = final_train.sort_values(['pid'])
+    final_test = final_test.sort_values(['pid'])
+
+    final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+    final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+    
+    end = timer()
+    print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
     return final_train, final_test
 
@@ -155,14 +173,14 @@ def model_train(train_x, train_y, model,  model_idx):
         clf = LogisticRegression(C=1, penalty='l1', solver='liblinear')
     
     elif model == 'RF':
-        clf = RandomForestClassifier(n_estimators=150, max_depth=11,random_state=0, class_weight='balanced') # class_weight='balanced'
+        clf = RandomForestClassifier(n_estimators=150, max_depth=5, random_state=0, class_weight='balanced') # class_weight='balanced'
     
     elif model == 'lgbm':
         clf = LGBMClassifier(n_estimators=1500, num_leaves=31, boosting_type='gbdt', metric='binary_logloss',
                         learning_rate=0.01, objective='binary')
 
     elif model == 'SVM':
-        clf = SVC(C=2, gamma=100, kernel='poly', probability=True)
+        clf = SVC(C=2, gamma=100, probability=True)
 
     clf.fit(train_x, train_y)
 
@@ -172,9 +190,7 @@ def model_train(train_x, train_y, model,  model_idx):
 
     end = timer()
     print('Model Training Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
-
-
-
+    
 
 if __name__ == '__main__':
     parser = ConfigParser()
@@ -184,24 +200,19 @@ if __name__ == '__main__':
     model =  parser.get('OPTION', 'model')
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
-        data_split()
-        
-        for s_i in range(0, 30):
+        data_split('outlier')
+    
+        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
 
-            trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-            # testset = pd.read_csv(input_data_path + "testset_" + str(model_idx) + ".csv")
+        train_x = trainset.drop(['pid', 'label'], axis=1)
+        train_y = trainset[['label']]
 
-            train_x = trainset.drop(['pid', 'label'], axis=1)
-            train_y = trainset[['label']]
-
-            model_train(train_x, train_y, model, s_i)
+        model_train(train_x, train_y, model, s_i)
 
     else:
 
-        for s_i in range(0, 30):
-            
-            trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-            train_x = trainset.drop(['label', 'pid'], axis=1)
-            train_y = trainset[['label']]
+        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        train_x = trainset.drop(['label', 'pid'], axis=1)
+        train_y = trainset[['label']]
 
-            model_train(train_x, train_y, model, s_i)
+        model_train(train_x, train_y, model, s_i)

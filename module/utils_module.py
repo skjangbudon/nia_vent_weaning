@@ -24,7 +24,7 @@ def evaluation(y_prob, test_y, cut_off):
     y_pred = np.where(y_prob > cut_off, 1, 0)
 
     # roc_score = auc(fprs, tprs)
-    roc_score = roc_auc_score(test_y, y_pred, average='micro')
+    roc_score = roc_auc_score(test_y, pred_positive_label, average='micro')
     prc = average_precision_score(test_y, pred_positive_label)
     accuracy = accuracy_score(test_y, y_pred)
     prec = precision_score(test_y, y_pred)
