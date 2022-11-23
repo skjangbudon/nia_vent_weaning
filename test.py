@@ -45,7 +45,7 @@ def model_test():
         # Test dataset
         testset = pd.read_csv(input_data_path + "testset_" + str(s_i) + ".csv")
 
-        test_x = testset.drop(['pid', 'label']+ignore_list, axis=1)
+        test_x = testset.drop(['pid', 'label'], axis=1)
         test_y = list(testset['label'])
         logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i))
 

@@ -176,10 +176,6 @@ def model_train(train_x, train_y, model,  model_idx):
 
 
 
-
-
-
-
 if __name__ == '__main__':
     parser = ConfigParser()
     parser.read('/VOLUME/nia_vent_weaning/config/train_config.ini')
