@@ -37,18 +37,17 @@ def model_test():
     start = timer() 
 
     # for evaluation
-    # final_df = pd.DataFrame()
     auc_list = []
 
     # Test dataset
-    testset = pd.read_csv(input_data_path + "testset_" + str(s_i) + ".csv")
+    testset = pd.read_csv(input_data_path + "testset.csv")
 
     test_x = testset.drop(['pid', 'label'], axis=1)
     test_y = list(testset['label'])
     logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i))
 
     # Import model
-    clf = joblib.load(model_path + model + '_' + str(s_i) + '.pkl') 
+    clf = joblib.load(model_path + model + '.pkl') 
     # prediction
     y_prob = clf.predict_proba(test_x)[:,1]
     pred_result = evaluation(y_prob, test_y, cut_off=0.5)
@@ -56,19 +55,12 @@ def model_test():
     # append result in list
     auc_list.append(pred_result[0])
 
-    # confusion_df = pred_result[-2]    # Confusion Matrix Results
-
+    # Save Final Result
     testset['y_prob'] = y_prob
     testset['y_pred'] = pred_result[-1]
     testset['Real'] = test_y
     result_df = testset[['pid', 'y_prob', 'y_pred', 'Real']]
-    result_df.to_csv(result_path + 'model_prob/pred_result_' + str(s_i) + '.csv')
-
-    # Save Final Result
-    # final_df['AUROC'] = auc_list
-    # final_df.to_csv(result_path + model + '_result.csv')
-
-    end = timer()
+    result_df.to_csv(result_path + 'pred_result.csv')
 
     logger.info('====='*20)
     logger.info('*----- FINAL OUTPUT')
@@ -81,9 +73,10 @@ def model_test():
     cm_df = pd.DataFrame(cm)
     cm_df.to_csv(result_path + 'Confusion_Matrix.csv')
 
+    end = timer()
+
     logger.info('====='*20)
     logger.info('*----- Prediction Ended at ' + f'[ {dt.datetime.now(timezone("Asia/Seoul"))} ]' + '\tTime elapsed: ' + f'[ {dt.timedelta(seconds=end-start)} seconds]')
-
 
 if __name__ == '__main__':
     model_test()

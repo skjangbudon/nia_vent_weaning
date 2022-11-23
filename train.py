@@ -146,8 +146,8 @@ def data_split(imp_method):
     final_train = final_train.sort_values(['pid'])
     final_test = final_test.sort_values(['pid'])
 
-    final_train.to_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
-    final_test.to_csv(input_data_path  + "testset_" + str(s_i) + ".csv")
+    final_train.to_csv(input_data_path + "trainset.csv")
+    final_test.to_csv(input_data_path  + "testset.csv")
     
     end = timer()
     print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
@@ -185,7 +185,7 @@ def model_train(train_x, train_y, model,  model_idx):
     clf.fit(train_x, train_y)
 
     # Save Model (pickled binary file)
-    file_name = model + '_' + str(model_idx) +'.pkl' 
+    file_name = model +'.pkl' 
     joblib.dump(clf, model_path + file_name)
 
     end = timer()
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
         data_split('outlier')
     
-        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        trainset = pd.read_csv(input_data_path + "trainset.csv")
 
         train_x = trainset.drop(['pid', 'label'], axis=1)
         train_y = trainset[['label']]
@@ -211,7 +211,7 @@ if __name__ == '__main__':
 
     else:
 
-        trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
+        trainset = pd.read_csv(input_data_path + "trainset.csv")
         train_x = trainset.drop(['label', 'pid'], axis=1)
         train_y = trainset[['label']]
 
