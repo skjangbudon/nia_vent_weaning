@@ -41,13 +41,16 @@ def model_test():
 
     # Test dataset
     testset = pd.read_csv(input_data_path + "testset.csv")
+    # testset = pd.read_csv(input_data_path + "testset_" + str(s_i) +  ".csv")
 
     test_x = testset.drop(['pid', 'label'], axis=1)
     test_y = list(testset['label'])
     logger.info('Model Inference Proceeding.... Test Experiment ' + str(s_i))
 
     # Import model
-    clf = joblib.load(model_path + model + '.pkl') 
+    clf = joblib.load(model_path + model  + '.pkl') 
+    # clf = joblib.load(model_path + model + "_" + str(s_i) + '.pkl') 
+
     # prediction
     y_prob = clf.predict_proba(test_x)[:,1]
     pred_result = evaluation(y_prob, test_y, cut_off=0.5)

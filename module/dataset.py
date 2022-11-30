@@ -112,9 +112,9 @@ def get_demo(data_path):
 
     # Demo data 정리
     demo = pd.read_csv(data_path + 'demographics.csv', index_col=0)
-    demo['birth'] = demo['birth_date'].str[:4]
-    demo['adm'] = demo['hosp_adm_date'].str[:4]
-    demo['age'] = demo['adm'].astype(int) - demo['birth'].astype(int) + 1
+    demo['birth'] = demo['birth_date'].str[:4].astype(int)
+    demo['adm'] = demo['hosp_adm_date'].str[:4].astype(int)
+    demo['age'] = demo['adm'] - demo['birth'] + 1
     demo = demo[['patient_id', 'sex', 'age', 'icu_type', 'hosp_adm_date', 'hosp_discharge_date', 'icu_adm_date', 'icu_discharge_date', 'death_datetime']]
     return demo
 

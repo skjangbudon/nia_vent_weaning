@@ -39,6 +39,7 @@ def get_final_input():
     # Vital + LAB + Drug + Ventilator-parameters
     numeric_var = list(set(vital.item)) + list(set(lab.item))
     ventil_var= list(set(ventil_param.item))[:-1]
+    print(ventil_var)
     drug_var = list(set(drug.drug_name))
 
     for before_time in tqdm.tqdm(range(0, 3)):

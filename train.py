@@ -35,10 +35,10 @@ def data_split(imp_method):
 
     print('Dataset Sampling Started at ', dt.datetime.now())
 
-    data_dir = '/VOLUME/nia_vent_weaning/data/model_data/' + str(input_window) + 'h/'
-    df1 = pd.read_csv(data_dir + '0h_data.csv', index_col=0)
-    df2 = pd.read_csv(data_dir + '1h_data.csv', index_col=0)
-    df3 = pd.read_csv(data_dir + '2h_data.csv', index_col=0)
+    # data_dir = '/VOLUME/nia_vent_weaning/data/model_data/' + str(input_window) + 'h/'
+    df1 = pd.read_csv(data_dir + str(input_window) + 'h/' + '0h_data.csv', index_col=0)
+    df2 = pd.read_csv(data_dir + str(input_window) + 'h/' + '1h_data.csv', index_col=0)
+    df3 = pd.read_csv(data_dir + str(input_window) + 'h/' + '2h_data.csv', index_col=0)
     dataset = pd.concat([df1, df2, df3], axis=0)
 
     dataset['icu_type'] = dataset['icu_type'].astype(str)
@@ -69,12 +69,13 @@ def data_split(imp_method):
     # fail_group = dataset[dataset['label']==1]['pid'].tolist()
 
     ignore_features = ['pid', 'label', 'icu_type']
-    # Random Sampling
-    print('Sampling index : ', s_i)
 
+    # Random Sampling
     # np.random.seed(s_i)        
     # train_suc = list(np.random.choice(success_group, int(len(success_group)*0.8)))  # positive
     # train_fail = list(np.random.choice(fail_group, int(len(fail_group)*0.8)))       # negative
+
+    # print('Sampling index : ', s_i)
 
     random.seed(s_i)
     train_suc = random.sample(success_group, int(len(success_group)*0.8))
@@ -148,7 +149,9 @@ def data_split(imp_method):
 
     final_train.to_csv(input_data_path + "trainset.csv")
     final_test.to_csv(input_data_path  + "testset.csv")
-    
+    # final_train.to_csv(input_data_path + "trainset_" + str(s_i) +  ".csv")
+    # final_test.to_csv(input_data_path  + "testset_" + str(s_i) +  ".csv")
+        
     end = timer()
     print('Dataset Sampling Ended at ', dt.datetime.now(), '\tTime elapsed: ', dt.timedelta(seconds=end-start), 'seconds')
 
@@ -185,7 +188,7 @@ def model_train(train_x, train_y, model,  model_idx):
     clf.fit(train_x, train_y)
 
     # Save Model (pickled binary file)
-    file_name = model +'.pkl' 
+    file_name = model + '.pkl' 
     joblib.dump(clf, model_path + file_name)
 
     end = timer()
@@ -201,17 +204,17 @@ if __name__ == '__main__':
 
     if len(os.listdir(input_data_path))==0: # input 데이터가 없으면
         data_split('outlier')
-    
-        trainset = pd.read_csv(input_data_path + "trainset.csv")
 
+        trainset = pd.read_csv(input_data_path + "trainset.csv")
+        # trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
         train_x = trainset.drop(['pid', 'label'], axis=1)
         train_y = trainset[['label']]
 
         model_train(train_x, train_y, model, s_i)
 
     else:
-
         trainset = pd.read_csv(input_data_path + "trainset.csv")
+        # trainset = pd.read_csv(input_data_path + "trainset_" + str(s_i) + ".csv")
         train_x = trainset.drop(['label', 'pid'], axis=1)
         train_y = trainset[['label']]
 
